@@ -17,9 +17,9 @@ public class CompositeIdManyToOneWithCompanyInIdTest extends AbstractTest {
     @Override
     protected Class<?>[] entities() {
         return new Class<?>[] {
-                Company.class,
-                Employee.class,
-                Phone.class,
+            Company.class,
+            Employee.class,
+            Phone.class,
         };
     }
 
@@ -98,8 +98,6 @@ public class CompositeIdManyToOneWithCompanyInIdTest extends AbstractTest {
             Set<Employee> employees = _companyA.getEmployees();
             assertNotNull(employees);
 
-            employees.stream().map(e -> "******************************" +e.getName()).forEach(System.out::println);
-
             assertEquals(100L, ((Employee)employees.toArray()[0]).getId().employeeNumber.longValue());
 
             _companyA.employees.clear();
@@ -148,6 +146,9 @@ public class CompositeIdManyToOneWithCompanyInIdTest extends AbstractTest {
 
         private String name;
 
+        @OneToMany(cascade = CascadeType.ALL, mappedBy = "id.company", orphanRemoval = true)
+        Set<Employee> employees = new HashSet<>();
+
         public Long getId() {
             return id;
         }
@@ -163,9 +164,6 @@ public class CompositeIdManyToOneWithCompanyInIdTest extends AbstractTest {
         public void setName(String name) {
             this.name = name;
         }
-
-        @OneToMany(cascade = CascadeType.ALL, mappedBy = "id.company", orphanRemoval = true)
-        Set<Employee> employees = new HashSet<>();
 
         public Set<Employee> getEmployees() {
             return employees;
@@ -221,12 +219,12 @@ public class CompositeIdManyToOneWithCompanyInIdTest extends AbstractTest {
 
         @ManyToOne
         @JoinColumns({
-                @JoinColumn(
-                        name = "company_id",
-                        referencedColumnName = "company_id"),
-                @JoinColumn(
-                        name = "employee_number",
-                        referencedColumnName = "employee_number")
+            @JoinColumn(
+                name = "company_id",
+                referencedColumnName = "company_id"),
+            @JoinColumn(
+                name = "employee_number",
+                referencedColumnName = "employee_number")
         })
         private Employee employee;
 
