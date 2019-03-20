@@ -5,7 +5,9 @@ import org.junit.Test;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -15,9 +17,9 @@ public class CompositeIdManyToOneWithCompanyInIdTest extends AbstractTest {
     @Override
     protected Class<?>[] entities() {
         return new Class<?>[] {
-            Company.class,
-            Employee.class,
-            Phone.class,
+                Company.class,
+                Employee.class,
+                Phone.class,
         };
     }
 
@@ -54,6 +56,89 @@ public class CompositeIdManyToOneWithCompanyInIdTest extends AbstractTest {
 
     }
 
+
+    @Test
+    public void test_composit_key() {
+        LOGGER.debug("test");
+
+        Company companyA = doInJPA(entityManager -> {
+            Company _company = new Company();
+            _company.setId(1L);
+            _company.setName("A.com");
+            Employee employee = new Employee();
+            employee.setId(new EmployeeId(_company, 100L));
+            employee.setName("Vlad Mihalcea");
+            _company.employees.add(employee);
+
+            entityManager.persist(_company);
+            return _company;
+        });
+
+
+        Company companyB = doInJPA(entityManager -> {
+            Company _company = new Company();
+            _company.setId(2L);
+            _company.setName("B.com");
+            Employee employee = new Employee();
+            employee.setId(new EmployeeId(_company, 200L));
+            employee.setName("Vlad Mihalcea");
+            _company.employees.add(employee);
+            entityManager.persist(_company);
+            return _company;
+        });
+
+
+
+
+        doInJPA(entityManager -> {
+            Company _companyA = entityManager.find(Company.class, 1L);
+            assertNotNull(_companyA);
+            assertEquals(1L, _companyA.getId().longValue());
+
+            Set<Employee> employees = _companyA.getEmployees();
+            assertNotNull(employees);
+
+            employees.stream().map(e -> "******************************" +e.getName()).forEach(System.out::println);
+
+            assertEquals(100L, ((Employee)employees.toArray()[0]).getId().employeeNumber.longValue());
+
+            _companyA.employees.clear();
+
+            Employee employee200 = new Employee();
+            employee200.setId(new EmployeeId(_companyA, 200L));
+            employee200.setName("Vlad Mihalcea");
+            _companyA.employees.add(employee200);
+
+            Company result = entityManager.merge(_companyA);
+            assertEquals(1, result.getEmployees().size());
+            Employee empA200 = result.getEmployees().toArray(new Employee[0])[0];
+            assertEquals(200L, empA200.getId().getEmployeeNumber().longValue());
+            assertEquals(_companyA.getId(), empA200.getId().getCompany().getId());
+
+            Company _companyB = entityManager.find(Company.class, 2L);
+            assertNotNull(_companyB);
+            assertEquals(2L, _companyB.getId().longValue());
+
+            Employee e200 = _companyB.getEmployees().toArray(new Employee[0])[0];
+            assertEquals(200L, e200.getId().getEmployeeNumber().longValue());
+            assertEquals(_companyB.getId(), e200.getId().getCompany().getId());
+
+
+
+
+        });
+
+        doInJPA(entityManager -> {
+            Company _companyB = entityManager.find(Company.class, 2L);
+            assertNotNull(_companyB);
+            assertEquals(2L, _companyB.getId().longValue());
+        });
+
+
+
+
+    }
+
     @Entity(name = "Company")
     @Table(name = "company")
     public static class Company {
@@ -77,6 +162,13 @@ public class CompositeIdManyToOneWithCompanyInIdTest extends AbstractTest {
 
         public void setName(String name) {
             this.name = name;
+        }
+
+        @OneToMany(cascade = CascadeType.ALL, mappedBy = "id.company", orphanRemoval = true)
+        Set<Employee> employees = new HashSet<>();
+
+        public Set<Employee> getEmployees() {
+            return employees;
         }
 
         @Override
@@ -129,12 +221,12 @@ public class CompositeIdManyToOneWithCompanyInIdTest extends AbstractTest {
 
         @ManyToOne
         @JoinColumns({
-            @JoinColumn(
-                name = "company_id",
-                referencedColumnName = "company_id"),
-            @JoinColumn(
-                name = "employee_number",
-                referencedColumnName = "employee_number")
+                @JoinColumn(
+                        name = "company_id",
+                        referencedColumnName = "company_id"),
+                @JoinColumn(
+                        name = "employee_number",
+                        referencedColumnName = "employee_number")
         })
         private Employee employee;
 
